@@ -80,6 +80,6 @@ urlpatterns=[
     path('complaints/submit/', SubmitComplaintView.as_view()),
     path('admin/complaints/', AdminComplaintListView.as_view()),
     path('admin/complaints/<int:complaint_id>/resolve/', MarkComplaintResolvedView.as_view()),
-
+    path('admin/monthly-stats/', MonthlyBookingRevenueView.as_view(),)
 ]
 

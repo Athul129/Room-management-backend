@@ -1,3 +1,7 @@
+from .models import Booking
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
+from rest_framework.permissions import IsAdminUser
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
@@ -827,7 +831,6 @@ class RoomListView(APIView):
         })
 
 
-
 class StaffBookingForUserView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -904,7 +907,8 @@ class StaffBookingListView(APIView):
 
     def get(self, request):
         staff_user = request.user
-        bookings = Booking.objects.filter(booked_by=staff_user).order_by('-check_in')
+        bookings = Booking.objects.filter(
+            booked_by=staff_user).order_by('-check_in')
         serializer = StaffBookingSerializer(bookings, many=True)
         return Response({
             "Success": True,
@@ -912,6 +916,7 @@ class StaffBookingListView(APIView):
             "data": serializer.data,
             "errors": None
         })
+
 
 class NotificationListView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -1106,3 +1111,37 @@ class AdminMessage(APIView):
             "data": None,
             "errors": None
         }, status=201)
+
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Sum
+class MonthlyBookingRevenueView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request):
+        data = (
+            Booking.objects
+            .filter(is_approved=True)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(
+                bookings=Count('id'),
+                revenue=Sum('total_price')
+            )
+            .order_by('month')
+        )
+
+        formatted_data = [
+            {
+                "month": d['month'].strftime('%b'),
+                "bookings": d['bookings'],
+                "revenue": float(d['revenue'])
+            } for d in data
+        ]
+
+        return Response({
+            "Success": True,
+            "message": "Monthly bookings and revenue fetched",
+            "data": formatted_data,
+            "errors": None
+        })
